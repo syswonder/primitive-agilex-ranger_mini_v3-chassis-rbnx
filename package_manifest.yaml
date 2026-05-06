@@ -2,9 +2,11 @@
 #
 # Wraps the upstream `ranger_ros2` (vendored under src/ranger_ros2)
 # which talks to the Ranger Mini's CAN bus via `ugv_sdk` (vendored
-# under src/ugv_sdk). On the Jetson the CAN interface is `can_ranger`
-# (renamed from can0 by udev — see /etc/systemd/network/* on the
-# robot) so it's stable across reboots.
+# under src/ugv_sdk). The CAN interface name (can0, can_ranger,
+# whatever the host calls it) is config-driven via `port_name:`. The
+# package never hardcodes the device name, so a deploy stays a
+# single config file with no out-of-band udev / systemd-networkd
+# dependencies that have to be set up before the package will run.
 #
 # Owns the `primitive/chassis/*` namespace.
 #
@@ -22,7 +24,7 @@
 #   primitive/chassis/move      mode=rpc        transport=gRPC  ExecuteMoveCommand (TODO)
 #
 # Config (passed via `Driver(CMD_INIT, config_json)`):
-#   port_name        default "can_ranger"          — CAN interface
+#   port_name        default "can0"          — CAN interface (override per host)
 #   robot_model      default "ranger_mini_v2"
 #   odom_frame       default "odom"
 #   base_frame       default "base_link"

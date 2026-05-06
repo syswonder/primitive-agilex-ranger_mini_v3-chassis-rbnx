@@ -1,7 +1,6 @@
 # ranger_chassis_rbnx
 
-Robonix package wrapping the **AgileX Ranger Mini v2** chassis. Owns
-the `primitive/chassis/*` namespace.
+Robonix package wrapping the **AgileX Ranger Mini v2** chassis. Owns the `primitive/chassis/*` namespace.
 
 ## Capability surface
 
@@ -11,29 +10,15 @@ the `primitive/chassis/*` namespace.
 | `robonix/primitive/chassis/odom`    | topic_out | ROS 2     | `/odom` (nav_msgs/Odometry)                 |
 | `robonix/primitive/chassis/twist_in`| topic_in  | ROS 2     | `/cmd_vel` (geometry_msgs/Twist)            |
 
-`primitive/chassis/state` and `primitive/chassis/move` (rpc-mode) need
-their own gRPC handlers implementing `chassis/srv/{GetRobotState,
-ExecuteMoveCommand}` — TODO; not on the critical path for the rtabmap
-bring-up which only consumes odom.
+`primitive/chassis/state` and `primitive/chassis/move` (rpc-mode) need their own gRPC handlers implementing `chassis/srv/{GetRobotState, ExecuteMoveCommand}` — TODO.
 
 ## Driver-init lifecycle
 
-`start.sh` brings up the atlas bridge — no ROS spawn. The bridge:
+`start.sh` brings up the atlas bridge — no ROS spawn. The bridge opens a gRPC server (default port 50234), registers the capability and declares only `primitive/chassis/driver`, then blocks awaiting `Driver(CMD_INIT, config_json)`.
 
-1. opens a gRPC server (default port 50234),
-2. registers the capability and declares only `primitive/chassis/driver`,
-3. blocks awaiting `Driver(CMD_INIT, config_json)`.
+When `rbnx boot` calls Init, the handler parses config (CAN port, robot model, frames, update rate), spawns `ros2 launch ranger_bringup ranger_mini_v2.launch.xml`, waits for the first `nav_msgs/Odometry` on `/<odom_topic_name>`, and declares `chassis/odom` + `chassis/twist_in` on atlas.
 
-When `rbnx boot` calls Init, the handler:
-
-1. parses config (CAN port, robot model, frames, update rate),
-2. spawns `ros2 launch ranger_bringup ranger_mini_v2.launch.xml`,
-3. waits for the first `nav_msgs/Odometry` on `/<odom_topic_name>`,
-4. declares `chassis/odom` + `chassis/twist_in` on atlas.
-
-If the chassis isn't powered or CAN isn't up, the sentinel times out and
-Init returns `state="error"` (NOT deferred — the chassis owns its
-process; we know it's stuck if we just spawned it and got nothing).
+If the chassis isn't powered or CAN isn't up, the sentinel times out and Init returns `state="error"` (NOT deferred — the chassis owns its process; we know it's stuck if we just spawned it and got nothing).
 
 ## Layout
 
@@ -51,17 +36,15 @@ ranger_chassis_rbnx/
 
 ## CAN bus naming
 
-The Jetson uses udev to rename the Ranger's CAN interface from `can0`
-to `can_ranger` so it's stable across reboots and side-by-side with
-other CAN devices. See `/etc/systemd/network/` on the robot. Override
-with `port_name: can0` in the deploy manifest if you're testing on a
-host that hasn't been re-configured.
+The CAN interface name is config-driven — set `port_name:` in your deploy manifest's `config:` block to whatever the host calls its CAN device (`can0`, `can_ranger`, `can_chassis`, …). The package never hardcodes a device name, so it works on any host regardless of how its CAN interfaces are named.
+
+When multiple CAN devices share a host you may want to rename the Ranger's interface to something stable via `udev` / `systemd-networkd` so the name doesn't shift across boots, then point `port_name:` at the rename. That's a host-side operation — the package only sees the name you give it via config.
 
 ## Config (passed via `Driver(CMD_INIT, config_json)`)
 
 ```json
 {
-  "port_name":         "can_ranger",
+  "port_name":         "can0",
   "robot_model":       "ranger_mini_v2",
   "odom_frame":        "odom",
   "base_frame":        "base_link",
@@ -73,12 +56,8 @@ host that hasn't been re-configured.
 }
 ```
 
-`publish_odom_tf` defaults to false; the canonical
-`base_link → odom` TF should come from soma's robot_state_publisher
-chain (URDF). Setting this to true here means competing publishers on
-`/tf` — only useful if soma isn't deployed.
+`publish_odom_tf` defaults to false; the canonical `base_link → odom` TF should come from soma's robot_state_publisher chain (URDF). Setting this to true here means competing publishers on `/tf` — only useful if soma isn't deployed.
 
 ## License
 
-This package: Apache-2.0.
-Vendored ranger_ros2 / ugv_sdk: see their respective LICENSE files.
+This package: Apache-2.0. Vendored ranger_ros2 / ugv_sdk: see their respective LICENSE files.
