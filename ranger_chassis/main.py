@@ -136,12 +136,12 @@ def init(cfg: dict):
         _kill_ranger()
         return Err(f"no Odometry on {odom_topic} within {sentinel_timeout:.1f}s")
 
-    cap.declare_ros2(
+    cap.declare_ros2_topic(
         "robonix/primitive/chassis/odom",
         topic=odom_topic,
         qos="reliable",
     )
-    cap.declare_ros2(
+    cap.declare_ros2_topic(
         "robonix/primitive/chassis/twist_in",
         topic=cmd_vel_topic,
         qos="reliable",
