@@ -3,12 +3,6 @@
 # Build phase: colcon-build the vendored ranger_ros2 + ugv_sdk, then
 # rbnx codegen so atlas_bridge can import atlas_pb2 + lifecycle_pb2.
 set -euo pipefail
-# ROS 2 humble setup.bash references AMENT_TRACE_SETUP_FILES /
-# COLCON_TRACE without an [ -z ] guard, so under `set -u` they
-# trip "unbound variable". Initialise to empty.
-: "${AMENT_TRACE_SETUP_FILES:=}"
-: "${COLCON_TRACE:=}"
-export AMENT_TRACE_SETUP_FILES COLCON_TRACE
 PKG="${RBNX_PACKAGE_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$PKG"
 CLEAN="${RBNX_BUILD_CLEAN:-}"
@@ -24,7 +18,7 @@ ln -snf "$PKG/src/ugv_sdk"     "$PKG/rbnx-build/ws/src/ugv_sdk"
 
 ROS_DISTRO="${ROS_DISTRO:-humble}"
 # shellcheck disable=SC1091
-source "/opt/ros/${ROS_DISTRO}/setup.bash"
+set +u; source "/opt/ros/${ROS_DISTRO}/setup.bash"; set -u
 
 echo "[ranger_chassis/build] colcon build (ranger_ros2 + ugv_sdk)"
 cd "$PKG/rbnx-build/ws"
