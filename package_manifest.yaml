@@ -40,6 +40,8 @@ package:
   description: AgileX Ranger Mini chassis driver wrapper.
   license: Apache-2.0
 
+capability_id: ranger_chassis
+
 build: bash scripts/build.sh
 start: bash scripts/start.sh
 
