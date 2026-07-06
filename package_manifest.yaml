@@ -39,6 +39,7 @@ package:
   vendor: robonix
   description: AgileX Ranger Mini chassis driver wrapper.
   tags: [primitive, chassis, agilex, ranger_mini_v3, ros2]
+  maintainers: [syswonder]
   license: Apache-2.0
 
 capability_id: ranger_chassis
