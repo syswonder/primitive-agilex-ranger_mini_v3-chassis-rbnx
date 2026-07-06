@@ -1,6 +1,6 @@
 # ranger_chassis_rbnx
 
-Robonix package wrapping the **AgileX Ranger Mini v2** chassis. Owns the `primitive/chassis/*` namespace.
+Robonix package wrapping the **AgileX Ranger Mini v3** chassis. Owns the `primitive/chassis/*` namespace.
 
 ## Capability surface
 
