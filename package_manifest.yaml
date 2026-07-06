@@ -36,7 +36,6 @@ manifestVersion: 1
 package:
   name: robonix.primitive.agilex.ranger_mini_v3.chassis
   version: 0.1.0
-  vendor: robonix
   description: AgileX Ranger Mini chassis driver wrapper.
   tags: [primitive, chassis, agilex, ranger_mini_v3, ros2]
   maintainers: [wheatfox <wheatfox17@icloud.com>]
