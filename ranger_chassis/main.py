@@ -32,7 +32,7 @@ import threading
 import time
 from pathlib import Path
 
-from robonix_api import Capability, Ok, Err
+from robonix_api import Err, Ok, Primitive
 
 logging.basicConfig(
     level=os.environ.get("RANGER_LOG_LEVEL", "INFO"),
@@ -40,7 +40,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("ranger")
 
-cap = Capability(id="ranger_chassis", namespace="robonix/primitive/chassis")
+cap = Primitive(id="ranger_chassis", namespace="robonix/primitive/chassis")
 
 _pkg_root: Path = Path(__file__).resolve().parent.parent
 _ranger_proc: subprocess.Popen | None = None
