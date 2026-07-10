@@ -83,8 +83,17 @@ bool AsyncCAN::Open() {
 
 void AsyncCAN::Close() {
   io_context_.stop();
-  if (io_thread_.joinable()) io_thread_.join();
-  io_context_.reset();
+  if (io_thread_.joinable()) {
+    // ReadFromPort may see a CAN error on the io_context thread itself.
+    // Joining that same thread throws std::system_error("Resource deadlock
+    // avoided") and used to terminate ranger_base_node.
+    if (io_thread_.get_id() == std::this_thread::get_id()) {
+      io_thread_.detach();
+    } else {
+      io_thread_.join();
+      io_context_.reset();
+    }
+  }
   
   // release port fd
   const int close_result = ::close(can_fd_);
