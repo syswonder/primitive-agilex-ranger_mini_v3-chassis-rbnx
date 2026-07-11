@@ -57,13 +57,33 @@ def _setup_can(cfg: dict) -> None:
     import shutil
     port = cfg.get("port_name", "can_ranger")
     bitrate = str(int(cfg.get("can_bitrate", 500000)))
+    current = subprocess.run(
+        ["ip", "-details", "link", "show", port],
+        capture_output=True,
+        text=True,
+    )
+    if current.returncode == 0 and "UP" in current.stdout.splitlines()[0] and f"bitrate {bitrate}" in current.stdout:
+        log.info("CAN %s already up @ %s bps", port, bitrate)
+        return
+
     sudo = ["sudo", "-n"] if os.geteuid() != 0 and shutil.which("sudo") else []
+    failures: list[str] = []
     for c in (["ip", "link", "set", port, "down"],
               ["ip", "link", "set", port, "type", "can", "bitrate", bitrate],
               ["ip", "link", "set", port, "up"]):
         r = subprocess.run(sudo + c, capture_output=True, text=True)
         if r.returncode != 0:
-            log.warning("CAN setup '%s' failed: %s", " ".join(c), (r.stderr or "").strip())
+            failures.append(f"{' '.join(c)}: {(r.stderr or r.stdout).strip()}")
+    if failures:
+        raise RuntimeError("CAN setup failed: " + "; ".join(failures))
+
+    verified = subprocess.run(
+        ["ip", "-details", "link", "show", port],
+        capture_output=True,
+        text=True,
+    )
+    if verified.returncode != 0 or "UP" not in verified.stdout.splitlines()[0] or f"bitrate {bitrate}" not in verified.stdout:
+        raise RuntimeError(f"CAN {port} did not become UP at {bitrate} bps")
     log.info("CAN %s configured up @ %s bps", port, bitrate)
 
 
