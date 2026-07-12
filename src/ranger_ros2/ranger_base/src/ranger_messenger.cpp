@@ -188,6 +188,11 @@ void RangerROSMessenger::PublishStateToROS() {
   auto state = robot_->GetRobotState();
   auto actuator_state = robot_->GetActuatorState();
 
+  // Integrate with the motion mode reported by this feedback frame. Using the
+  // previous frame's mode can integrate a stale spinning angular velocity as
+  // Ackermann mode is entered (or vice versa), while publishing a zero twist.
+  motion_mode_ = state.motion_mode_state.motion_mode;
+
   // update odometry
   {
     double dt = (current_time_ - last_time_).seconds();
@@ -212,8 +217,6 @@ void RangerROSMessenger::PublishStateToROS() {
 
   // publish motion mode
   {
-    motion_mode_ = state.motion_mode_state.motion_mode;
-
     ranger_msgs::msg::MotionState motion_msg;
     motion_msg.header.stamp = current_time_;
     motion_msg.motion_mode = state.motion_mode_state.motion_mode;
@@ -417,6 +420,18 @@ void RangerROSMessenger::TwistCmdCallback(
     geometry_msgs::msg::Twist::SharedPtr msg) {
   double steer_cmd;
   double radius;
+
+  // A zero Twist is a stop, not a request to solve a steering geometry.
+  // Without this guard CalculateSteeringAngle() evaluates 0 / 0, sends a NaN
+  // steering angle, and flips the chassis from spinning to Ackermann every
+  // time Nav2's velocity smoother publishes its terminal zero command.
+  constexpr double kZeroCommandEpsilon = 1e-6;
+  if (std::abs(msg->linear.x) < kZeroCommandEpsilon &&
+      std::abs(msg->linear.y) < kZeroCommandEpsilon &&
+      std::abs(msg->angular.z) < kZeroCommandEpsilon) {
+    robot_->SetMotionCommand(0.0, 0.0, 0.0);
+    return;
+  }
 
   // analyze Twist msg and switch motion_mode
   // check for parking mode, only applicable to RangerMiniV2
