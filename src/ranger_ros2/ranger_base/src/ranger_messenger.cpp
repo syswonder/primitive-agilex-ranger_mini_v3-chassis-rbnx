@@ -421,17 +421,33 @@ void RangerROSMessenger::TwistCmdCallback(
   double steer_cmd;
   double radius;
 
-  // A zero Twist is a stop, not a request to solve a steering geometry.
-  // Without this guard CalculateSteeringAngle() evaluates 0 / 0, sends a NaN
-  // steering angle, and flips the chassis from spinning to Ackermann every
-  // time Nav2's velocity smoother publishes its terminal zero command.
+  // A zero Twist must stop immediately, but a sustained terminal stop should
+  // also leave a four-wheel-steering chassis in its neutral forward pose.
+  // Debounce the mode change so transient zero samples between controller
+  // commands don't flap spinning/Ackermann mode or feed 0 / 0 into the
+  // steering geometry.
   constexpr double kZeroCommandEpsilon = 1e-6;
+  constexpr auto kNeutralDelay = std::chrono::milliseconds(500);
   if (std::abs(msg->linear.x) < kZeroCommandEpsilon &&
       std::abs(msg->linear.y) < kZeroCommandEpsilon &&
       std::abs(msg->angular.z) < kZeroCommandEpsilon) {
     robot_->SetMotionCommand(0.0, 0.0, 0.0);
+    const auto now = std::chrono::steady_clock::now();
+    if (!zero_cmd_active_) {
+      zero_cmd_active_ = true;
+      zero_cmd_since_ = now;
+    } else if (motion_mode_ != MotionState::MOTION_MODE_DUAL_ACKERMAN &&
+               now - zero_cmd_since_ >= kNeutralDelay) {
+      robot_->SetMotionMode(MotionState::MOTION_MODE_DUAL_ACKERMAN);
+      robot_->SetMotionCommand(0.0, 0.0, 0.0);
+      motion_mode_ = MotionState::MOTION_MODE_DUAL_ACKERMAN;
+      zero_cmd_since_ = now;
+      RCLCPP_INFO(node_->get_logger(),
+                  "sustained zero command: steering returned to neutral Ackermann mode");
+    }
     return;
   }
+  zero_cmd_active_ = false;
 
   // analyze Twist msg and switch motion_mode
   // check for parking mode, only applicable to RangerMiniV2

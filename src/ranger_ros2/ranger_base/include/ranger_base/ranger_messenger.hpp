@@ -11,9 +11,10 @@
 #define RANGER_MESSENGER_HPP
 
 //std and c++ inlclude
-#include <string>
-#include <memory>
 #include <cmath>
+#include <chrono>
+#include <memory>
+#include <string>
 
 //ros include
 #include <rclcpp/rclcpp.hpp>
@@ -101,6 +102,8 @@ class RangerROSMessenger : public std::enable_shared_from_this<RangerROSMessenge
 
   uint8_t motion_mode_ = 0;
   bool parking_mode_;
+  bool zero_cmd_active_ = false;
+  std::chrono::steady_clock::time_point zero_cmd_since_;
 
   rclcpp::Publisher<ranger_msgs::msg::SystemState>::SharedPtr system_state_pub_;
   rclcpp::Publisher<ranger_msgs::msg::MotionState>::SharedPtr motion_state_pub_;
