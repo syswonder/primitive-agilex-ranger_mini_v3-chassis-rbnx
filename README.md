@@ -16,7 +16,7 @@ Robonix package wrapping the **AgileX Ranger Mini v3** chassis. Owns the `primit
 
 `start.sh` brings up the atlas bridge — no ROS spawn. The bridge opens a gRPC server (default port 50234), registers the capability and declares only `primitive/chassis/driver`, then blocks awaiting `Driver(CMD_INIT, config_json)`.
 
-When `rbnx boot` calls Init, the handler parses config (CAN port, robot model, frames, update rate), spawns `ros2 launch ranger_bringup ranger_mini_v2.launch.xml`, waits for the first `nav_msgs/Odometry` on `/<odom_topic_name>`, and declares `chassis/odom` + `chassis/twist_in` on atlas.
+When `rbnx boot` calls Init, the handler parses config, spawns `ros2 launch ranger_bringup ranger_mini_v3.launch.xml`, waits for the first `nav_msgs/Odometry` on `/<odom_topic_name>`, and declares `chassis/odom` + `chassis/twist_in` on atlas.
 
 If the chassis isn't powered or CAN isn't up, the sentinel times out and Init returns `state="error"` (NOT deferred — the chassis owns its process; we know it's stuck if we just spawned it and got nothing).
 
@@ -36,7 +36,7 @@ ranger_chassis_rbnx/
 
 ## CAN bus naming
 
-The CAN interface name is config-driven — set `port_name:` in your deploy manifest's `config:` block to whatever the host calls its CAN device (`can0`, `can_ranger`, `can_chassis`, …). The package never hardcodes a device name, so it works on any host regardless of how its CAN interfaces are named.
+The CAN interface defaults to `can_ranger` and is config-driven. Set `port_name:` in the deploy manifest only when the host uses another stable name (`can0`, `can_chassis`, …).
 
 When multiple CAN devices share a host you may want to rename the Ranger's interface to something stable via `udev` / `systemd-networkd` so the name doesn't shift across boots, then point `port_name:` at the rename. That's a host-side operation — the package only sees the name you give it via config.
 
@@ -44,8 +44,8 @@ When multiple CAN devices share a host you may want to rename the Ranger's inter
 
 ```json
 {
-  "port_name":         "can0",
-  "robot_model":       "ranger_mini_v2",
+  "port_name":         "can_ranger",
+  "robot_model":       "ranger_mini_v3",
   "odom_frame":        "odom",
   "base_frame":        "base_link",
   "update_rate":       50,
@@ -56,7 +56,9 @@ When multiple CAN devices share a host you may want to rename the Ranger's inter
 }
 ```
 
-`publish_odom_tf` defaults to false; the canonical `base_link → odom` TF should come from soma's robot_state_publisher chain (URDF). Setting this to true here means competing publishers on `/tf` — only useful if soma isn't deployed.
+`publish_odom_tf` defaults to false. A URDF publisher cannot publish the dynamic `odom -> base_link` transform. Set this to true when the Ranger odometry is the selected localization source and no other localization component publishes that transform. Keep it false when another odometry or localization provider owns the same TF edge.
+
+See `config.spec` for the complete config surface and defaults. Deployments should omit values that match these defaults.
 
 ## License
 

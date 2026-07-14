@@ -2,17 +2,14 @@
 #
 # Wraps the upstream `ranger_ros2` (vendored under src/ranger_ros2)
 # which talks to the Ranger Mini's CAN bus via `ugv_sdk` (vendored
-# under src/ugv_sdk). The CAN interface name (can0, can_ranger,
-# whatever the host calls it) is config-driven via `port_name:`. The
-# package never hardcodes the device name, so a deploy stays a
-# single config file with no out-of-band udev / systemd-networkd
-# dependencies that have to be set up before the package will run.
+# under src/ugv_sdk). The CAN interface defaults to `can_ranger` and remains
+# config-driven via `port_name:` for hosts that use another stable name.
 #
 # Owns the `primitive/chassis/*` namespace.
 #
 # Lifecycle: start.sh launches the atlas bridge ONLY (no ROS spawn).
 # `rbnx boot` then calls `Driver(CMD_INIT, config_json)` — the handler
-# spawns `ros2 launch ranger_bringup ranger_mini_v2.launch.xml`, waits
+# spawns `ros2 launch ranger_bringup ranger_mini_v3.launch.xml`, waits
 # for the first /odom message, and only THEN declares the data
 # interfaces on atlas.
 #
@@ -23,13 +20,14 @@
 #   primitive/chassis/move      mode=rpc        transport=gRPC  ExecuteMoveCommand (TODO)
 #
 # Config (passed via `Driver(CMD_INIT, config_json)`):
-#   port_name        default "can0"          — CAN interface (override per host)
-#   robot_model      default "ranger_mini_v2"
+#   port_name        default "can_ranger"    — CAN interface (override per host)
+#   robot_model      default "ranger_mini_v3"
 #   odom_frame       default "odom"
 #   base_frame       default "base_link"
 #   update_rate      default 50
 #   odom_topic_name  default "odom"                — published topic
-#   publish_odom_tf  default false                 — leave to soma's robot_state_publisher
+#   publish_odom_tf  default false                 — dynamic odom -> base_link TF
+#   cmd_vel_topic    default "/cmd_vel"
 #   sentinel_timeout_s default 30.0
 manifestVersion: 1
 
