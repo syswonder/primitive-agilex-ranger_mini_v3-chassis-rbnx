@@ -7,18 +7,18 @@ Owns `robonix/primitive/chassis/*`. Wraps the upstream `ranger_ros2`
 launch which talks to the Ranger Mini's CAN bus via `ugv_sdk`.
 
 Lifecycle:
-    on_init      — spawn ranger_mini_v2.launch.xml, wait for first
+    on_init      — spawn ranger_mini_v3.launch.xml, wait for first
                    /odom message, declare chassis/odom + chassis/twist_in.
     on_shutdown  — kill ranger subprocess.
 
 Config (from manifest):
-    port_name        default "can0"          — CAN interface (override per host)
-    robot_model      default "ranger_mini_v2"
+    port_name        default "can_ranger"    — CAN interface (override per host)
+    robot_model      default "ranger_mini_v3"
     odom_frame       default "odom"
     base_frame       default "base_link"
     update_rate      default 50
     odom_topic_name  default "odom"
-    publish_odom_tf  default false           — let robot_state_publisher own /tf
+    publish_odom_tf  default false           — enable when no localization owns odom -> base
     cmd_vel_topic    default "/cmd_vel"      — what the chassis subscribes to
     sentinel_timeout_s default 30.0
 """
@@ -100,9 +100,9 @@ def _spawn_ranger(cfg: dict) -> None:
     global _ranger_proc
     _setup_can(cfg)
     args = [
-        "ros2", "launch", "ranger_bringup", "ranger_mini_v2.launch.xml",
+        "ros2", "launch", "ranger_bringup", "ranger_mini_v3.launch.xml",
         f"port_name:={cfg.get('port_name', 'can_ranger')}",
-        f"robot_model:={cfg.get('robot_model', 'ranger_mini_v2')}",
+        f"robot_model:={cfg.get('robot_model', 'ranger_mini_v3')}",
         f"odom_frame:={cfg.get('odom_frame', 'odom')}",
         f"base_frame:={cfg.get('base_frame', 'base_link')}",
         f"update_rate:={int(cfg.get('update_rate', 50))}",
